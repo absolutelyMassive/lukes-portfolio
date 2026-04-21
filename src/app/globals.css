@@ -1,0 +1,32 @@
+@import "tailwindcss";
+@import "./tokens-primitives.css";
+@import "./tokens-dark.css";
+
+:root {
+  --page-bg: #020202;
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.8);
+  --line-muted: rgba(255, 255, 255, 0.1);
+  --tile: #c4c4c4;
+  --pill-bg: rgba(255, 255, 255, 0.25);
+}
+
+@theme inline {
+  --color-page-bg: var(--page-bg);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-line-muted: var(--line-muted);
+  --color-tile: var(--tile);
+  --color-pill-bg: var(--pill-bg);
+  /* Mirror semantic surfaces from tokens-dark so utilities (e.g. bg-material-inverse) are generated. */
+  --color-material-inverse: var(--material-inverse);
+  --font-sans: var(--font-satoshi), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-satoshi), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background: var(--page-bg);
+  color: var(--text-primary);
+  font-family: var(--font-satoshi), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 500;
+}
