@@ -2,6 +2,7 @@ const links = [
   { label: "Link 1", href: "#" },
   { label: "Link 2", href: "#" },
   { label: "Fluid", href: "/fluid" },
+  { label: "ASCII", href: "/ripple-typo" },
 ];
 
 export function SiteNav() {

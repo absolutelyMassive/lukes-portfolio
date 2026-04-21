@@ -221,7 +221,7 @@ export function createFluidSim(
   canvas: HTMLCanvasElement,
   options: FluidSimOptions = {},
 ): FluidSimHandle | null {
-  const gl = canvas.getContext("webgl2", {
+  const glMaybe = canvas.getContext("webgl2", {
     alpha: false,
     depth: false,
     stencil: false,
@@ -229,7 +229,8 @@ export function createFluidSim(
     premultipliedAlpha: false,
     preserveDrawingBuffer: false,
   });
-  if (!gl) return null;
+  if (!(glMaybe instanceof WebGL2RenderingContext)) return null;
+  const gl = glMaybe;
 
   const extFloat = gl.getExtension("EXT_color_buffer_float");
   gl.getExtension("OES_texture_float_linear");

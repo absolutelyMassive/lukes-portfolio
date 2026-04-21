@@ -1,0 +1,68 @@
+/* Scoped styles for wave-driven typographic ASCII (pretext demo palette). */
+
+.rippleTypoRoot {
+  background: linear-gradient(180deg, #0a0a12 0%, #06060a 100%);
+  color: #ddd8d0;
+}
+
+.rippleTypoRows {
+  pointer-events: none;
+}
+
+.rippleTypoRoot .rippleTypoRow {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+  white-space: pre;
+  font-family: Georgia, Palatino, "Times New Roman", serif;
+  font-variant-ligatures: none;
+}
+
+.rippleTypoRoot .w3 {
+  font-weight: 300;
+}
+.rippleTypoRoot .w5 {
+  font-weight: 500;
+}
+.rippleTypoRoot .w8 {
+  font-weight: 800;
+}
+.rippleTypoRoot .it {
+  font-style: italic;
+}
+
+.rippleTypoRoot .a1 {
+  color: rgba(196, 163, 90, 0.1);
+}
+.rippleTypoRoot .a2 {
+  color: rgba(196, 163, 90, 0.2);
+}
+.rippleTypoRoot .a3 {
+  color: rgba(196, 163, 90, 0.3);
+}
+.rippleTypoRoot .a4 {
+  color: rgba(196, 163, 90, 0.4);
+}
+.rippleTypoRoot .a5 {
+  color: rgba(196, 163, 90, 0.5);
+}
+.rippleTypoRoot .a6 {
+  color: rgba(196, 163, 90, 0.6);
+}
+.rippleTypoRoot .a7 {
+  color: rgba(196, 163, 90, 0.7);
+}
+.rippleTypoRoot .a8 {
+  color: rgba(196, 163, 90, 0.8);
+}
+.rippleTypoRoot .a9 {
+  color: rgba(196, 163, 90, 0.9);
+}
+.rippleTypoRoot .a10 {
+  color: rgba(196, 163, 90, 1);
+}
+
+.rippleTypoChrome {
+  pointer-events: auto;
+}
