@@ -146,8 +146,11 @@ export function buildBrightnessLookup(
     const brightness = brightnessByte / 255;
     const monoChar =
       MONO_RAMP[Math.min(MONO_RAMP.length - 1, (brightness * MONO_RAMP.length) | 0)]!;
-    if (brightness < 0.03) {
-      brightnessLookup.push({ monoChar, propHtml: " " });
+    if (brightness < 0.005) {
+      // True-black floor: only the very bottom of the byte range renders as
+      // empty. The idle ambient+drift in the consumer keeps typical cells
+      // above this, so the page always shows a faint dash/dot bed.
+      brightnessLookup.push({ monoChar, propHtml: '<span class="cell"> </span>' });
       continue;
     }
 
@@ -155,7 +158,7 @@ export function buildBrightnessLookup(
     const alphaIndex = Math.max(1, Math.min(10, Math.round(brightness * 10)));
     brightnessLookup.push({
       monoChar,
-      propHtml: `<span class="${wCls(match.weight, match.style)} a${alphaIndex}">${esc(match.char)}</span>`,
+      propHtml: `<span class="cell ${wCls(match.weight, match.style)} a${alphaIndex}">${esc(match.char)}</span>`,
     });
   }
   return brightnessLookup;

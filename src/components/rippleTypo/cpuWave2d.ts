@@ -1,18 +1,35 @@
 /**
  * CPU discrete 2D wave equation (FDTD-style) on a regular grid.
- * Same stencil as WebGL `FRAG_STEP` in fluidSim.ts: reflecting Neumann at
- * outer edges, no interior obstacles. Packed time steps use two buffers
- * h_curr / h_prev; each step writes h_next then swaps.
+ * Same Laplacian stencil as WebGL `FRAG_STEP` in fluidSim.ts, plus optional
+ * loss terms so the field can settle to 0 instead of sloshing forever:
+ * - `edgeReflect < 1` softens border ghosts (outflow at edges).
+ * - `velocityDamp` subtracts a fraction of (h − h_prev), i.e. damped-wave /
+ *   telegraph behaviour, so crests meeting each other lose energy instead of
+ *   re‑pumping interference forever in a closed grid.
  */
 
 export type CpuWave2DOptions = {
   /** c² in (Δx=1)² units; must stay ≤ 0.5 for explicit stability. */
   waveSpeed2?: number;
   damping?: number;
+  /**
+   * Ghost neighbor at the outer border is `h0 * edgeReflect` instead of `h0`.
+   * 1 = perfect Neumann reflection (energy trapped). 0.75–0.9 = mild absorbing
+   * boundary so ripples die out toward a flat rest state.
+   */
+  edgeReflect?: number;
+  /**
+   * Per-step friction on discrete velocity `(h - h_prev)`. 0 = pure wave
+   * (superpositions persist). ~0.03–0.08 strongly suppresses infinite ringing
+   * when many wavefronts cross. Applied before `damping`.
+   */
+  velocityDamp?: number;
 };
 
 const DEFAULT_C2 = 0.35;
 const DEFAULT_DAMPING = 0.996;
+const DEFAULT_EDGE_REFLECT = 1;
+const DEFAULT_VELOCITY_DAMP = 0;
 
 export class CpuWave2D {
   cols: number;
@@ -22,6 +39,8 @@ export class CpuWave2D {
   hn: Float32Array;
   c2: number;
   damping: number;
+  edgeReflect: number;
+  velocityDamp: number;
 
   constructor(cols: number, rows: number, options: CpuWave2DOptions = {}) {
     if (cols < 2 || rows < 2) throw new Error("CpuWave2D: cols and rows must be >= 2");
@@ -33,6 +52,8 @@ export class CpuWave2D {
     this.hn = new Float32Array(n);
     this.c2 = options.waveSpeed2 ?? DEFAULT_C2;
     this.damping = options.damping ?? DEFAULT_DAMPING;
+    this.edgeReflect = options.edgeReflect ?? DEFAULT_EDGE_REFLECT;
+    this.velocityDamp = options.velocityDamp ?? DEFAULT_VELOCITY_DAMP;
   }
 
   /** y = 0 is top row; x = 0 is left. Indices row-major: y * cols + x. */
@@ -79,7 +100,10 @@ export class CpuWave2D {
 
   /** One explicit wave step. */
   step(): void {
-    const { cols, rows, h, hp, hn, c2, damping } = this;
+    const { cols, rows, h, hp, hn, c2, damping, edgeReflect, velocityDamp } =
+      this;
+    const er = edgeReflect;
+    const vd = velocityDamp;
     for (let y = 0; y < rows; y++) {
       const row = y * cols;
       for (let x = 0; x < cols; x++) {
@@ -87,13 +111,14 @@ export class CpuWave2D {
         const h0 = h[i]!;
         const hpm1 = hp[i]!;
 
-        const L = x > 0 ? h[i - 1]! : h0;
-        const R = x < cols - 1 ? h[i + 1]! : h0;
-        const T = y > 0 ? h[i - cols]! : h0;
-        const B = y < rows - 1 ? h[i + cols]! : h0;
+        const L = x > 0 ? h[i - 1]! : h0 * er;
+        const R = x < cols - 1 ? h[i + 1]! : h0 * er;
+        const T = y > 0 ? h[i - cols]! : h0 * er;
+        const B = y < rows - 1 ? h[i + cols]! : h0 * er;
 
         const lap = L + R + T + B - 4 * h0;
-        hn[i] = (2 * h0 - hpm1 + c2 * lap) * damping;
+        const vel = h0 - hpm1;
+        hn[i] = (2 * h0 - hpm1 + c2 * lap - vd * vel) * damping;
       }
     }
     const tmp = this.hp;
