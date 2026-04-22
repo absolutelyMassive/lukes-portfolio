@@ -39,7 +39,7 @@ export type BrightnessEntry = {
 
 const MONO_RAMP = " .`-_:,;^=+/|)\\!?0oOQ#%@";
 
-const PROP_FAMILY = 'Georgia, Palatino, "Times New Roman", serif';
+const PROP_FAMILY = '"Helvetica Neue", Helvetica, Arial, sans-serif';
 
 export function esc(ch: string): string {
   if (ch === "<") return "&lt;";

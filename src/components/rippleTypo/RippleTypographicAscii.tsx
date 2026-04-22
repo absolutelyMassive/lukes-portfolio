@@ -20,14 +20,31 @@ const SPLAT_SIGMA_CELLS = 3.2;
 const NUM_DRIFT_BLOBS = 10;
 
 // --- Phrase-stamp overlay (Moby Dick letters appear inside bright ripples) ---
-/** Cells below this brightness ignore any stamp and keep the dash/dot glyph. */
-const STAMP_BRIGHTNESS_THRESHOLD = 0.32;
-/** Cursor must move at least this many char cells from the last stamp. */
-const STAMP_MIN_SPACING_CELLS = 6;
+/**
+ * Cells below this brightness ignore any stamp and keep the dash/dot glyph.
+ * Mapped against the 10-tier alpha lookup (a1 ≈ 0.0–0.1, a2 ≈ 0.1–0.2, …),
+ * so 0.10 means letters show from the a1/a2 boundary upward — the whole
+ * ripple envelope, including the faintest tail cells, carries text.
+ */
+const STAMP_BRIGHTNESS_THRESHOLD = 0.1;
+/** Cursor must move at least this many char cells from the last stamp event. */
+const STAMP_MIN_SPACING_CELLS = 10;
 /** …and at least this long in real time. */
-const STAMP_MIN_SPACING_MS = 140;
-/** Hard cap on concurrently active stamps (oldest pops off when exceeded). */
-const MAX_ACTIVE_STAMPS = 24;
+const STAMP_MIN_SPACING_MS = 220;
+/**
+ * How many rows above/below the anchor row also receive a stamped phrase.
+ * Each row gets its OWN phrase from the corpus, so a single cursor splat
+ * drops a small vertically-stacked block of words — so as the ripple
+ * expands, bright cells on every row it touches resolve to a legible
+ * letter instead of palette-picked V/U/N noise.
+ */
+const STAMP_VERTICAL_RADIUS = 4;
+/**
+ * Hard cap on concurrently active stamps (oldest pops off when exceeded).
+ * One cursor event now pushes up to (2*RADIUS + 1) stamps, so this needs
+ * headroom proportional to the expected trail length.
+ */
+const MAX_ACTIVE_STAMPS = 140;
 /** After this long a stamp is unconditionally dropped even if still bright. */
 const STAMP_LIFETIME_SEC = 4.5;
 
@@ -81,7 +98,9 @@ function computeDims(innerW: number, innerH: number): DimState {
   const w = Math.max(200, Math.floor(innerW));
   const h = Math.max(200, Math.floor(innerH));
 
-  let fontSize = Math.round(clamp(w / 90, 12, 17));
+  // Ceiling kept deliberately modest so bright cells (bold weight + full
+  // alpha) don't feel overpowering during a fast hover on wide screens.
+  let fontSize = Math.round(clamp(w / 100, 12, 15));
   let lineHeight = fontSize + 3;
   let rows = Math.floor(h / lineHeight);
   rows = clamp(rows, 14, 96);
@@ -492,27 +511,50 @@ export function RippleTypographicAscii() {
     }
 
     /**
-     * Pin the next phrase at the cell under the cursor, with cooldowns to
-     * keep rapid pointermove spam from flooding the overlay.
+     * Drop a vertical stack of phrase stamps at the cell under the cursor.
+     * Each row in the band (±STAMP_VERTICAL_RADIUS around the anchor) pulls
+     * a DIFFERENT phrase from the corpus, with small horizontal jitter so
+     * the block reads as a loose found-poem rather than a rigid rectangle.
+     * Cooldowns keep rapid pointermove spam from flooding the overlay.
      */
     function maybeStamp(nx: number, ny: number) {
       const dim = dimRef.current;
       const phrases = phrasesRef.current;
       if (!dim || phrases.length === 0) return;
-      const row = clamp(Math.floor(ny * dim.rows), 0, dim.rows - 1);
-      const col = clamp(Math.floor(nx * dim.cols), 0, dim.cols - 1);
+      const anchorRow = clamp(Math.floor(ny * dim.rows), 0, dim.rows - 1);
+      const anchorCol = clamp(Math.floor(nx * dim.cols), 0, dim.cols - 1);
       const tSec = performance.now() * 0.001;
       const last = lastStampRef.current;
       if (last) {
         if (tSec - last.tSec < STAMP_MIN_SPACING_MS / 1000) return;
-        if (Math.hypot(row - last.row, col - last.col) < STAMP_MIN_SPACING_CELLS) return;
+        if (
+          Math.hypot(anchorRow - last.row, anchorCol - last.col) <
+          STAMP_MIN_SPACING_CELLS
+        )
+          return;
       }
-      const phrase = phrases[phraseCursorRef.current % phrases.length]!;
-      phraseCursorRef.current++;
+
       const stamps = stampsRef.current;
-      stamps.push({ anchorRow: row, anchorCol: col, chars: phrase, spawnedAt: tSec });
-      if (stamps.length > MAX_ACTIVE_STAMPS) stamps.shift();
-      lastStampRef.current = { row, col, tSec };
+      const nPhrases = phrases.length;
+      for (let dr = -STAMP_VERTICAL_RADIUS; dr <= STAMP_VERTICAL_RADIUS; dr++) {
+        const r = anchorRow + dr;
+        if (r < 0 || r >= dim.rows) continue;
+        const phrase = phrases[phraseCursorRef.current % nPhrases]!;
+        phraseCursorRef.current++;
+        // Jitter the horizontal origin per row so phrases don't all start at
+        // the exact same column (keeps the block feeling organic). Shift is
+        // larger on rows further from the anchor to suggest radial spread.
+        const absDr = Math.abs(dr);
+        const jitterRange = 2 + absDr * 2;
+        const jitter = Math.floor(Math.random() * (jitterRange * 2 + 1)) - jitterRange;
+        // Also nudge the start left a bit so the phrase tends to span through
+        // the anchor column rather than always starting there.
+        const startBias = Math.floor(phrase.length * 0.3);
+        const col = anchorCol - startBias + jitter;
+        stamps.push({ anchorRow: r, anchorCol: col, chars: phrase, spawnedAt: tSec });
+      }
+      while (stamps.length > MAX_ACTIVE_STAMPS) stamps.shift();
+      lastStampRef.current = { row: anchorRow, col: anchorCol, tSec };
     }
 
     /**
