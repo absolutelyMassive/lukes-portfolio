@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { buildPhraseList } from "@/content/rippleTypoCorpus";
 import { CpuWave2D } from "./cpuWave2d";
 import {
   buildBrightnessLookup,
   buildPalette,
+  esc,
   type BrightnessEntry,
   type PaletteEntry,
 } from "./typographicAsciiPalette";
@@ -16,6 +18,18 @@ const SPLAT_SIGMA_CELLS = 3.2;
 
 /** How many independent Gaussian blobs drive the idle drift field. */
 const NUM_DRIFT_BLOBS = 10;
+
+// --- Phrase-stamp overlay (Moby Dick letters appear inside bright ripples) ---
+/** Cells below this brightness ignore any stamp and keep the dash/dot glyph. */
+const STAMP_BRIGHTNESS_THRESHOLD = 0.32;
+/** Cursor must move at least this many char cells from the last stamp. */
+const STAMP_MIN_SPACING_CELLS = 6;
+/** …and at least this long in real time. */
+const STAMP_MIN_SPACING_MS = 140;
+/** Hard cap on concurrently active stamps (oldest pops off when exceeded). */
+const MAX_ACTIVE_STAMPS = 24;
+/** After this long a stamp is unconditionally dropped even if still bright. */
+const STAMP_LIFETIME_SEC = 4.5;
 
 /**
  * One drifting Gaussian modulator of the idle brightness bed. Each blob has
@@ -34,6 +48,18 @@ type DriftBlob = {
   sigmaVel: number;
   amp: number;
   life: number;
+};
+
+/**
+ * A phrase pinned to a specific cell, extending horizontally to the right.
+ * Rendered only where the wave-driven brightness at that cell is above
+ * `STAMP_BRIGHTNESS_THRESHOLD`, so letters fade in and out with the ripple.
+ */
+type PhraseStamp = {
+  anchorRow: number;
+  anchorCol: number;
+  chars: string;
+  spawnedAt: number; // performance.now() * 0.001
 };
 
 type DimState = {
@@ -127,6 +153,11 @@ export function RippleTypographicAscii() {
   const driftExpYRef = useRef<Float32Array | null>(null);
   const driftRowFactorsRef = useRef<Float32Array>(new Float32Array(NUM_DRIFT_BLOBS));
 
+  const stampsRef = useRef<PhraseStamp[]>([]);
+  const phrasesRef = useRef<string[]>([]);
+  const phraseCursorRef = useRef(0);
+  const lastStampRef = useRef<{ row: number; col: number; tSec: number } | null>(null);
+
   useEffect(() => {
     const rootEl = rootRef.current;
     const hostEl = rowsHostRef.current;
@@ -142,6 +173,15 @@ export function RippleTypographicAscii() {
       measureCtxRef.current = mc.getContext("2d", { willReadFrequently: true });
     }
     if (!measureCtxRef.current) return;
+
+    if (phrasesRef.current.length === 0) {
+      phrasesRef.current = buildPhraseList();
+      // Start on a random phrase so reloading doesn't always show "call me
+      // ishmael" first.
+      phraseCursorRef.current = Math.floor(
+        Math.random() * Math.max(1, phrasesRef.current.length),
+      );
+    }
 
     function ensurePaletteAndLookup(dim: DimState) {
       const mctx = measureCtxRef.current;
@@ -356,10 +396,28 @@ export function RippleTypographicAscii() {
         }
       }
 
+      // ---- Age & bucket phrase stamps -------------------------------------
+      // Drop expired stamps once per frame. Anything still alive lands in
+      // `stampsByRow` so the hot cell loop only checks the handful of stamps
+      // on its own row (usually 0 or 1).
+      const stamps = stampsRef.current;
+      for (let i = stamps.length - 1; i >= 0; i--) {
+        if (now - stamps[i]!.spawnedAt > STAMP_LIFETIME_SEC) stamps.splice(i, 1);
+      }
+      const stampsByRow: Map<number, PhraseStamp[]> = new Map();
+      for (let i = 0; i < stamps.length; i++) {
+        const st = stamps[i]!;
+        if (st.anchorRow < 0 || st.anchorRow >= rowCount) continue;
+        const bucket = stampsByRow.get(st.anchorRow);
+        if (bucket) bucket.push(st);
+        else stampsByRow.set(st.anchorRow, [st]);
+      }
+
       // ---- Render rows -----------------------------------------------------
       for (let row = 0; row < rowCount; row++) {
         let propHtml = "";
         const fieldRowStart = row * os * fieldCols;
+        const rowStamps = stampsByRow.get(row);
 
         // Collapse row-side Gaussian into per-blob factor for this row so the
         // hot inner column loop only does one multiply per blob.
@@ -385,7 +443,33 @@ export function RippleTypographicAscii() {
 
           const t = clamp((avg / denom) * gain + ambient + drift, 0, 1);
           const brightnessByte = Math.min(255, (t * 255) | 0);
-          propHtml += lu[brightnessByte]!.propHtml;
+          const entry = lu[brightnessByte]!;
+
+          // Stamp override: if this cell falls within an active phrase's
+          // horizontal extent and the brightness is above threshold, render
+          // the phrase letter with the brightness-derived weight/alpha. Spaces
+          // in the phrase fall through to the palette so word gaps look like
+          // the surrounding dash/dot bed.
+          let stampChar: string | null = null;
+          if (rowStamps && t >= STAMP_BRIGHTNESS_THRESHOLD) {
+            for (let s = 0; s < rowStamps.length; s++) {
+              const st = rowStamps[s]!;
+              const offset = col - st.anchorCol;
+              if (offset >= 0 && offset < st.chars.length) {
+                const ch = st.chars.charAt(offset);
+                if (ch !== " ") {
+                  stampChar = ch;
+                  break;
+                }
+              }
+            }
+          }
+
+          if (stampChar !== null) {
+            propHtml += `<span class="cell ${entry.weightClass} a${entry.alphaIndex}">${esc(stampChar)}</span>`;
+          } else {
+            propHtml += entry.propHtml;
+          }
         }
         rowDivs[row]!.innerHTML = propHtml;
       }
@@ -408,6 +492,30 @@ export function RippleTypographicAscii() {
     }
 
     /**
+     * Pin the next phrase at the cell under the cursor, with cooldowns to
+     * keep rapid pointermove spam from flooding the overlay.
+     */
+    function maybeStamp(nx: number, ny: number) {
+      const dim = dimRef.current;
+      const phrases = phrasesRef.current;
+      if (!dim || phrases.length === 0) return;
+      const row = clamp(Math.floor(ny * dim.rows), 0, dim.rows - 1);
+      const col = clamp(Math.floor(nx * dim.cols), 0, dim.cols - 1);
+      const tSec = performance.now() * 0.001;
+      const last = lastStampRef.current;
+      if (last) {
+        if (tSec - last.tSec < STAMP_MIN_SPACING_MS / 1000) return;
+        if (Math.hypot(row - last.row, col - last.col) < STAMP_MIN_SPACING_CELLS) return;
+      }
+      const phrase = phrases[phraseCursorRef.current % phrases.length]!;
+      phraseCursorRef.current++;
+      const stamps = stampsRef.current;
+      stamps.push({ anchorRow: row, anchorCol: col, chars: phrase, spawnedAt: tSec });
+      if (stamps.length > MAX_ACTIVE_STAMPS) stamps.shift();
+      lastStampRef.current = { row, col, tSec };
+    }
+
+    /**
      * Hover-driven splats: every pointermove inside the root leaves a ripple
      * trail. A small click still produces a bigger "pebble drop" accent.
      */
@@ -422,6 +530,7 @@ export function RippleTypographicAscii() {
         };
       }
       splatNorm(p.nx, p.ny, 0.9);
+      maybeStamp(p.nx, p.ny);
     }
 
     function onMove(e: PointerEvent) {
@@ -447,6 +556,7 @@ export function RippleTypographicAscii() {
           const t = i / steps;
           wv.splat(prev.fx + (fx - prev.fx) * t, prev.fy + (fy - prev.fy) * t, str, SPLAT_SIGMA_CELLS);
         }
+        maybeStamp(p.nx, p.ny);
       } else {
         wv.splat(fx, fy, 0.15, SPLAT_SIGMA_CELLS);
       }

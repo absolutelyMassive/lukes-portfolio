@@ -30,13 +30,18 @@ export type PaletteEntry = {
 export type BrightnessEntry = {
   monoChar: string;
   propHtml: string;
+  /** e.g. "w3", "w5 it", "w8" — same string baked into `propHtml`. Re-exposed
+   *  so consumers can render a custom character with the same styling. */
+  weightClass: string;
+  /** 1..10, matches `.a1` … `.a10` classes in ripple-typo.css. */
+  alphaIndex: number;
 };
 
 const MONO_RAMP = " .`-_:,;^=+/|)\\!?0oOQ#%@";
 
 const PROP_FAMILY = 'Georgia, Palatino, "Times New Roman", serif';
 
-function esc(ch: string): string {
+export function esc(ch: string): string {
   if (ch === "<") return "&lt;";
   if (ch === ">") return "&gt;";
   if (ch === "&") return "&amp;";
@@ -150,15 +155,23 @@ export function buildBrightnessLookup(
       // True-black floor: only the very bottom of the byte range renders as
       // empty. The idle ambient+drift in the consumer keeps typical cells
       // above this, so the page always shows a faint dash/dot bed.
-      brightnessLookup.push({ monoChar, propHtml: '<span class="cell"> </span>' });
+      brightnessLookup.push({
+        monoChar,
+        propHtml: '<span class="cell"> </span>',
+        weightClass: "w3",
+        alphaIndex: 1,
+      });
       continue;
     }
 
     const match = findBest(palette, brightness, targetCellW);
     const alphaIndex = Math.max(1, Math.min(10, Math.round(brightness * 10)));
+    const weightClass = wCls(match.weight, match.style);
     brightnessLookup.push({
       monoChar,
-      propHtml: `<span class="cell ${wCls(match.weight, match.style)} a${alphaIndex}">${esc(match.char)}</span>`,
+      propHtml: `<span class="cell ${weightClass} a${alphaIndex}">${esc(match.char)}</span>`,
+      weightClass,
+      alphaIndex,
     });
   }
   return brightnessLookup;
