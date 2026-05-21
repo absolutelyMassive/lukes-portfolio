@@ -1,4 +1,4 @@
-/* Scoped styles for wave-driven typographic ASCII (pretext demo palette). */
+/* Wave-driven typographic ASCII — root page styles. */
 
 .rippleTypoRoot {
   background: #101821;
@@ -73,8 +73,4 @@
 }
 .rippleTypoRoot .a10 {
   color: #7bb1ed;
-}
-
-.rippleTypoChrome {
-  pointer-events: auto;
 }
