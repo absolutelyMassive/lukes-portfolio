@@ -19,6 +19,27 @@ const SPLAT_SIGMA_CELLS = 3.2;
 /** How many independent Gaussian blobs drive the idle drift field. */
 const NUM_DRIFT_BLOBS = 10;
 
+// --- Ambient wanderers (drag curving splat trails across the field) ------
+/**
+ * Invisible "ghost cursors" that drift continuously around the wave field,
+ * each dragging a small splat trail. Per-frame random acceleration nudges
+ * their velocity so paths curve organically rather than forming straight
+ * lines — the result is non-linear, criss-crossing ripple wakes. Hover
+ * splats ride on top of these and still dominate while the user is
+ * moving, because hover's per-event strength is much larger and
+ * normalization (ampMaxRef) shrinks ambient amplitude relative to hover
+ * peaks.
+ */
+const NUM_AMBIENT_WANDERERS = 8;
+const WANDERER_MIN_SPEED = 14; // field cells / sec
+const WANDERER_MAX_SPEED = 55; // field cells / sec
+const WANDERER_ACCEL = 65; // random velocity wander, field cells / sec^2
+const WANDERER_SIGMA_CELLS = 2.6;
+const WANDERER_BASE_STRENGTH = 0.0022;
+const WANDERER_SPEED_STRENGTH = 0.0022; // added per (cell moved this frame)
+const WANDERER_STRENGTH_MAX = 0.012;
+const WANDERER_RESPAWN_MARGIN = 10; // cells outside grid before respawn
+
 // --- Phrase-stamp overlay (Moby Dick letters appear inside bright ripples) ---
 /**
  * Cells below this brightness ignore any stamp and keep the dash/dot glyph.
@@ -65,6 +86,17 @@ type DriftBlob = {
   sigmaVel: number;
   amp: number;
   life: number;
+};
+
+/**
+ * One of the ambient "ghost cursors" dragging a splat trail through the
+ * wave field. Positions are in FIELD cells (not character cells).
+ */
+type Wanderer = {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
 };
 
 /**
@@ -172,6 +204,8 @@ export function RippleTypographicAscii() {
   const driftExpYRef = useRef<Float32Array | null>(null);
   const driftRowFactorsRef = useRef<Float32Array>(new Float32Array(NUM_DRIFT_BLOBS));
 
+  const wanderersRef = useRef<Wanderer[] | null>(null);
+
   const stampsRef = useRef<PhraseStamp[]>([]);
   const phrasesRef = useRef<string[]>([]);
   const phraseCursorRef = useRef(0);
@@ -253,6 +287,18 @@ export function RippleTypographicAscii() {
       };
     }
 
+    function spawnWanderer(fCols: number, fRows: number): Wanderer {
+      const angle = Math.random() * Math.PI * 2;
+      const speed =
+        WANDERER_MIN_SPEED + Math.random() * (WANDERER_MAX_SPEED - WANDERER_MIN_SPEED);
+      return {
+        x: Math.random() * fCols,
+        y: Math.random() * fRows,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+      };
+    }
+
     function applyDims(innerW: number, innerH: number) {
       const dim = computeDims(innerW, innerH);
       dimRef.current = dim;
@@ -279,6 +325,10 @@ export function RippleTypographicAscii() {
         velocityDamp: 0.018,
       });
       ampMaxRef.current = 0.006;
+      // (Re)seed the ambient wanderers so they match the new field size.
+      wanderersRef.current = Array.from({ length: NUM_AMBIENT_WANDERERS }, () =>
+        spawnWanderer(dim.fieldCols, dim.fieldRows),
+      );
     }
 
     applyDims(root.clientWidth, root.clientHeight);
@@ -307,6 +357,71 @@ export function RippleTypographicAscii() {
       if (!dim || !wv || !lu || rowDivs.length !== dim.rows) {
         rafRef.current = requestAnimationFrame(frame);
         return;
+      }
+
+      // Ambient wanderers — drag curving splat trails across the field so
+      // the resting state is continuously rippling. Each wanderer is an
+      // invisible ghost cursor with its own wandering velocity; per-frame
+      // random acceleration keeps paths non-linear. We reuse `dt` from the
+      // drift-blob block further down; for wanderer updates we clamp here
+      // so the first frame after mount doesn't teleport anything.
+      {
+        const nowS = performance.now() * 0.001;
+        const prevS = lastFrameTimeRef.current;
+        const wdt = prevS > 0 ? Math.min(0.1, nowS - prevS) : 1 / 60;
+        const wanderers = wanderersRef.current!;
+        for (let i = 0; i < wanderers.length; i++) {
+          const w = wanderers[i]!;
+          const prevX = w.x;
+          const prevY = w.y;
+
+          w.vx += (Math.random() - 0.5) * 2 * WANDERER_ACCEL * wdt;
+          w.vy += (Math.random() - 0.5) * 2 * WANDERER_ACCEL * wdt;
+          const sp = Math.hypot(w.vx, w.vy);
+          if (sp > WANDERER_MAX_SPEED) {
+            const k = WANDERER_MAX_SPEED / sp;
+            w.vx *= k;
+            w.vy *= k;
+          } else if (sp < WANDERER_MIN_SPEED && sp > 0) {
+            const k = WANDERER_MIN_SPEED / sp;
+            w.vx *= k;
+            w.vy *= k;
+          }
+
+          w.x += w.vx * wdt;
+          w.y += w.vy * wdt;
+
+          if (
+            w.x < -WANDERER_RESPAWN_MARGIN ||
+            w.x > dim.fieldCols + WANDERER_RESPAWN_MARGIN ||
+            w.y < -WANDERER_RESPAWN_MARGIN ||
+            w.y > dim.fieldRows + WANDERER_RESPAWN_MARGIN
+          ) {
+            wanderers[i] = spawnWanderer(dim.fieldCols, dim.fieldRows);
+            continue;
+          }
+
+          // Strength scales with distance moved so fast wanderers leave a
+          // visibly denser wake than slow ones — same feel as the hover
+          // line-splat but weaker per-segment.
+          const segDist = Math.hypot(w.x - prevX, w.y - prevY);
+          const str = Math.min(
+            WANDERER_STRENGTH_MAX,
+            WANDERER_BASE_STRENGTH + segDist * WANDERER_SPEED_STRENGTH,
+          );
+          // Line-splat between prev and new position so at higher speeds
+          // the trail stays continuous instead of dotted.
+          const steps = Math.min(3, Math.max(1, Math.round(segDist * 0.8)));
+          for (let s = 1; s <= steps; s++) {
+            const t = s / steps;
+            wv.splat(
+              prevX + (w.x - prevX) * t,
+              prevY + (w.y - prevY) * t,
+              str,
+              WANDERER_SIGMA_CELLS,
+            );
+          }
+        }
       }
 
       wv.stepTimes(WAVE_SUBSTEPS);

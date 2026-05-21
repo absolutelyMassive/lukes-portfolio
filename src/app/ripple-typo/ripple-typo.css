@@ -1,8 +1,8 @@
 /* Scoped styles for wave-driven typographic ASCII (pretext demo palette). */
 
 .rippleTypoRoot {
-  background: #344b66;
-  color: #6d9fd8;
+  background: #101821;
+  color: #7bb1ed;
 }
 
 .rippleTypoRows {
@@ -40,35 +40,36 @@
   font-style: italic;
 }
 
-/* Hand-picked anchor blues at a1/a3/a5/a7/a10 with linear-RGB interpolation
- * filling a2/a4/a6/a8/a9. Solid colors (not alpha) so each tier renders at
- * exactly its specified hex regardless of the background. */
+/* Strict linear-RGB ramp from the background (#101821) up to peak blue
+ * (#7BB1ED). Each tier sits at (n/10) of the way along that line, so the
+ * brightness progression is perfectly even. Solid colors (not alpha) so
+ * each tier renders at exactly its specified hex. */
 .rippleTypoRoot .a1 {
-  color: #4c6d8f;
+  color: #1b2735;
 }
 .rippleTypoRoot .a2 {
-  color: #597fa6;
+  color: #25374a;
 }
 .rippleTypoRoot .a3 {
-  color: #6690bd;
+  color: #30465e;
 }
 .rippleTypoRoot .a4 {
-  color: #6896c7;
+  color: #3b5573;
 }
 .rippleTypoRoot .a5 {
-  color: #6a9bd0;
+  color: #466587;
 }
 .rippleTypoRoot .a6 {
-  color: #6c9dd4;
+  color: #50749b;
 }
 .rippleTypoRoot .a7 {
-  color: #6d9fd8;
+  color: #5b83b0;
 }
 .rippleTypoRoot .a8 {
-  color: #72a5df;
+  color: #6692c4;
 }
 .rippleTypoRoot .a9 {
-  color: #76abe6;
+  color: #70a2d9;
 }
 .rippleTypoRoot .a10 {
   color: #7bb1ed;
