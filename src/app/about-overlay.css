@@ -1,0 +1,260 @@
+/* About overlay — rendered on top of the home (ripple) route when
+ * ?about=1 is present.
+ *
+ * Layered z-index relative to other chrome:
+ *   ripple (z=0) < about overlay (z=5) < SiteChrome nav (z=10)
+ * The nav must sit ABOVE this overlay so the "about" link stays
+ * clickable to close it again. */
+
+.aboutOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  color: #ffffff;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  pointer-events: none;
+  /* Symmetric fade in/out controlled by the `.is-visible` class. Mount-
+   * timing is handled by AboutGate so close animations finish before
+   * unmount. Duration must stay in sync with FADE_MS in AboutGate.tsx. */
+  opacity: 0;
+  transition: opacity 280ms ease-out;
+}
+
+.aboutOverlay.is-visible {
+  opacity: 1;
+}
+
+/* Children that need to be interactive (the download link) opt back in
+ * via .aboutDownload { pointer-events: auto }. The overall overlay is
+ * non-interactive so the SiteChrome nav above it stays accessible. */
+
+/* --- Title ----------------------------------------------------------- */
+
+.aboutTitle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  width: min(752px, 80vw);
+  text-align: center;
+  font-weight: 400;
+  font-size: clamp(36px, 6vw, 80px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+/* --- Floating images ------------------------------------------------- */
+
+/* Soft image-slot placeholders. Drop real <img> elements inside (or set
+ * a `background-image`) when assets are ready. */
+.aboutFloat {
+  position: absolute;
+  width: 113px;
+  height: 113px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  /* GPU-friendly: each tile owns its own compositor layer so the slow
+   * drift animation stays buttery without forcing the rest of the page
+   * to repaint. */
+  will-change: transform;
+  /* All four use ease-in-out infinite; durations + delays differ so the
+   * collection feels organic instead of locked together. */
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+/* Position roughly to the Figma layout, in viewport-relative units so
+ * the composition holds together as the window resizes. */
+.aboutFloat-1 {
+  top: 21%;
+  left: 12%;
+  animation-name: aboutDrift1;
+  animation-duration: 36s;
+  animation-delay: 0s;
+}
+.aboutFloat-2 {
+  top: 60%;
+  left: 22%;
+  animation-name: aboutDrift2;
+  animation-duration: 32s;
+  animation-delay: -8s;
+}
+.aboutFloat-3 {
+  top: 60%;
+  left: 65%;
+  animation-name: aboutDrift3;
+  animation-duration: 42s;
+  animation-delay: -15s;
+}
+.aboutFloat-4 {
+  top: 26%;
+  left: 78%;
+  animation-name: aboutDrift4;
+  animation-duration: 30s;
+  animation-delay: -5s;
+}
+
+@keyframes aboutDrift1 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  20% {
+    transform: translate3d(18px, 14px, 0);
+  }
+  45% {
+    transform: translate3d(-12px, 26px, 0);
+  }
+  70% {
+    transform: translate3d(-22px, 6px, 0);
+  }
+  85% {
+    transform: translate3d(8px, -10px, 0);
+  }
+}
+
+@keyframes aboutDrift2 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  25% {
+    transform: translate3d(-16px, -14px, 0);
+  }
+  50% {
+    transform: translate3d(10px, -22px, 0);
+  }
+  75% {
+    transform: translate3d(20px, 12px, 0);
+  }
+}
+
+@keyframes aboutDrift3 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  20% {
+    transform: translate3d(14px, -18px, 0);
+  }
+  50% {
+    transform: translate3d(-18px, -8px, 0);
+  }
+  80% {
+    transform: translate3d(-6px, 18px, 0);
+  }
+}
+
+@keyframes aboutDrift4 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  30% {
+    transform: translate3d(-20px, 10px, 0);
+  }
+  55% {
+    transform: translate3d(-8px, 22px, 0);
+  }
+  80% {
+    transform: translate3d(16px, 8px, 0);
+  }
+}
+
+/* --- Text card ------------------------------------------------------- */
+
+.aboutCard {
+  position: absolute;
+  top: 83px;
+  /* Right edge aligns with the right edge of the "about" nav link, which
+   * sits at the nav's right padding of 40px from the viewport edge. */
+  right: 40px;
+  width: 375px;
+  max-width: calc(100vw - 80px);
+  background: #ffffff;
+  color: #141e28;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 16px;
+  line-height: 1.125;
+  letter-spacing: -0.01em;
+  pointer-events: auto;
+}
+
+.aboutCard p {
+  margin: 0;
+  text-align: justify;
+}
+
+.aboutDownload {
+  display: inline-block;
+  color: #101821;
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-skip-ink: none;
+  text-underline-position: from-font;
+  cursor: pointer;
+}
+
+.aboutDownload:hover {
+  opacity: 0.7;
+}
+
+/* --- Responsive ------------------------------------------------------ */
+
+@media (max-width: 1024px) {
+  .aboutCard {
+    top: 100px;
+  }
+}
+
+@media (max-width: 767px) {
+  /* Hide the centered headline on small screens — the white card is the
+   * focus here. */
+  .aboutTitle {
+    display: none;
+  }
+
+  /* Center the card both axes against the viewport. translate-50 keeps
+   * it perfectly centered regardless of its measured size. Width caps
+   * keep it readable on the smallest devices and on phones in landscape. */
+  .aboutCard {
+    top: 50%;
+    right: auto;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(360px, calc(100vw - 48px));
+    max-width: none;
+  }
+
+  /* Trim the floating tiles down on small viewports so they don't
+   * compete with the card. Keeping just two preserves the "ambient
+   * motion" feel without crowding. */
+  .aboutFloat-3,
+  .aboutFloat-4 {
+    display: none;
+  }
+
+  .aboutFloat-1 {
+    top: 8%;
+    left: 6%;
+    width: 80px;
+    height: 80px;
+  }
+  .aboutFloat-2 {
+    top: 70%;
+    left: 70%;
+    width: 80px;
+    height: 80px;
+  }
+}
+
+/* Respect reduced-motion: drop the fade and the floating drift. */
+@media (prefers-reduced-motion: reduce) {
+  .aboutOverlay {
+    transition: none;
+  }
+  .aboutFloat {
+    animation: none;
+  }
+}

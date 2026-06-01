@@ -1,0 +1,275 @@
+/* Cinematic editorial gallery — scoped styles.
+ *
+ * Layout strategy:
+ * - On tablet+ screens, .galleryScroll is the scroll container with
+ *   `scroll-snap-type: y mandatory`. Each .gallerySection is one full
+ *   viewport with `scroll-snap-align: start`, so vertical scrolling
+ *   lands precisely on the next artwork.
+ * - On mobile (< 768px), the snap behavior is disabled and sections
+ *   collapse to their content height, becoming a clean stacked feed.
+ *
+ * Performance notes:
+ * - All animated chrome (number index opacity, title fade) uses
+ *   `transition` on `opacity` / `transform` only, which the compositor
+ *   can run without layout/paint.
+ * - The scroll container itself does the heavy lifting via native
+ *   CSS scroll-snap — no JS-driven scroll math, no jank.
+ */
+
+.galleryRoot {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  color: #fff;
+  font-size: 32px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  animation: galleryFadeIn 350ms ease-out;
+}
+
+@keyframes galleryFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* --- Chrome: title, close, index ------------------------------------- */
+
+.galleryHeader {
+  position: fixed;
+  top: 30px;
+  left: 120px;
+  z-index: 20;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 50vw;
+}
+
+.galleryTitle {
+  font-size: 32px;
+  line-height: 1;
+  transition: opacity 250ms ease;
+}
+
+.galleryMeta {
+  font-size: 14px;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0;
+}
+
+.galleryClose {
+  position: fixed;
+  top: 30px;
+  right: 40px;
+  z-index: 20;
+  font-size: 32px;
+  line-height: 1;
+  color: #fff;
+  text-decoration: none;
+  transition: opacity 150ms ease;
+}
+
+.galleryClose:hover {
+  opacity: 0.7;
+}
+
+.galleryIndex {
+  position: fixed;
+  top: 30px;
+  left: 30px;
+  z-index: 20;
+}
+
+.galleryIndex ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.galleryIndex button {
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  font: inherit;
+  font-size: 32px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: color 200ms ease, opacity 200ms ease;
+  letter-spacing: -0.02em;
+}
+
+.galleryIndex button:hover {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.galleryIndex button.is-active {
+  color: #fff;
+}
+
+/* --- Scroll snap container ------------------------------------------- */
+
+.galleryScroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  scroll-snap-type: y mandatory;
+  /* Smooth programmatic scrollIntoView for the index click handler.
+   * Native user-driven scrolls still feel snappy because snap handles
+   * the deceleration. */
+  scroll-behavior: smooth;
+  /* Hide scrollbar without breaking scroll — visual cleanliness matters
+   * here. */
+  scrollbar-width: none;
+}
+.galleryScroll::-webkit-scrollbar {
+  display: none;
+}
+
+.gallerySection {
+  position: relative;
+  height: 100vh;
+  /* Modern viewport unit accounting for dynamic browser UI on mobile. */
+  height: 100dvh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  /* Top padding clears the chrome row (Title at y=40–72) plus an extra
+   * gap below the title before the image starts. Left padding aligns
+   * the media's left edge with the Title column. */
+  padding: 100px 40px 40px 120px;
+  box-sizing: border-box;
+}
+
+/* The media frame — fixed 4:3 aspect ratio, anchored at the section's
+ * top-left, scaled to fit the remaining space. */
+.galleryFrame {
+  position: relative;
+  width: 100%;
+  max-width: min(80vw, 1100px);
+  max-height: calc(100% - 8px);
+  aspect-ratio: 4 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.galleryMedia {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  /* GPU-friendly: keep the element on its own layer while scrolling. */
+  will-change: transform;
+  background: #d9d9d9;
+}
+
+.galleryPlaceholder {
+  width: 100%;
+  height: 100%;
+  background: #d9d9d9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0, 0, 0, 0.25);
+  font-size: 96px;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+}
+
+/* --- Responsive breakpoints ----------------------------------------- */
+
+/* Extra-large desktop — the Figma "XL" variant caps the image at a
+ * narrower width so generous right-side whitespace remains. */
+@media (min-width: 1600px) {
+  .galleryFrame {
+    max-width: 60vw;
+  }
+}
+
+/* Tablet — mirror the desktop layout with slightly tighter right padding
+ * and the left rail nudged in to match the chrome offsets. Top + left
+ * padding still clear the index column (x=40) and the title row (y=40–72)
+ * so the media never sits behind them. */
+@media (max-width: 1024px) {
+  .galleryHeader {
+    left: 100px;
+  }
+  .gallerySection {
+    padding: 100px 32px 40px 100px;
+  }
+  .galleryFrame {
+    max-width: min(85vw, 900px);
+  }
+}
+
+/* Mobile — flatten into a clean stacked feed.
+ * - No scroll-snap, no horizontal padding: images bleed edge-to-edge.
+ * - 24px gap between consecutive images (margin on each section).
+ * - Title and number index are hidden; only the Close link remains. */
+@media (max-width: 767px) {
+  .galleryRoot {
+    font-size: 20px;
+  }
+
+  .galleryScroll {
+    scroll-snap-type: none;
+    padding-bottom: 80px;
+  }
+
+  .gallerySection {
+    height: auto;
+    min-height: 0;
+    padding: 0 24px;
+    margin-bottom: 24px;
+    scroll-snap-align: none;
+  }
+
+  .gallerySection:last-child {
+    margin-bottom: 0;
+  }
+
+  .galleryFrame {
+    max-width: 100%;
+    max-height: none;
+    aspect-ratio: 4 / 3;
+  }
+
+  /* Title + index are not shown on small screens — Close is the only chrome. */
+  .galleryHeader,
+  .galleryIndex {
+    display: none;
+  }
+
+  .galleryClose {
+    top: 24px;
+    right: 24px;
+    font-size: 20px;
+  }
+
+  .galleryPlaceholder {
+    font-size: 56px;
+  }
+}
+
+/* Respect reduced-motion: drop the fade-in and the smooth scroll. */
+@media (prefers-reduced-motion: reduce) {
+  .galleryRoot {
+    animation: none;
+  }
+  .galleryScroll {
+    scroll-behavior: auto;
+  }
+}
