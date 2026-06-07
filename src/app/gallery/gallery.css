@@ -1,29 +1,55 @@
-/* Cinematic editorial gallery — scoped styles.
+/* Gallery — Lukes Brand / Figma 3357:127162
  *
- * Layout strategy:
- * - On tablet+ screens, .galleryScroll is the scroll container with
- *   `scroll-snap-type: y mandatory`. Each .gallerySection is one full
- *   viewport with `scroll-snap-align: start`, so vertical scrolling
- *   lands precisely on the next artwork.
- * - On mobile (< 768px), the snap behavior is disabled and sections
- *   collapse to their content height, becoming a clean stacked feed.
- *
- * Performance notes:
- * - All animated chrome (number index opacity, title fade) uses
- *   `transition` on `opacity` / `transform` only, which the compositor
- *   can run without layout/paint.
- * - The scroll container itself does the heavy lifting via native
- *   CSS scroll-snap — no JS-driven scroll math, no jank.
+ * Layout: 60px sidebar (full height, from top) + top nav on the right + main.
  */
 
 .galleryRoot {
+  /* Colors (Figma Lukes Brand gallery) */
+  --gallery-bg: #000000;
+  --gallery-fg: #ffffff;
+  --gallery-fg-meta: #666666;
+  --gallery-fg-muted: #4d4d4d;
+  --gallery-stroke: #262626;
+
+  /* Typography — entire page */
+  --gallery-type-size: 16px;
+  --gallery-line-height: 20px;
+  --gallery-tracking: -0.02em;
+
+  /* Top nav */
+  --gallery-topnav-height: 60px;
+  --gallery-topnav-padding-x: 20px;
+  --gallery-project-info-gap: 8px;
+
+  /* Sidebar — 60px column (Figma); inset keeps 01–16 visible */
+  --gallery-sidebar-width: 60px;
+  --gallery-sidebar-padding-left: 20px;
+  --gallery-sidebar-padding-y: 24px;
+  --gallery-sidebar-index-gap: 4px;
+
+  /* Main stage — 20px inset from chrome; media scales to bottom/right edge */
+  --gallery-stage-padding: 20px;
+  --gallery-media-aspect: 4 / 3;
+  --gallery-media-bg: #000000;
+
+  --gallery-font: "PP Neue Machina", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+
   position: fixed;
   inset: 0;
-  background: #000;
-  color: #fff;
-  font-size: 32px;
-  line-height: 1;
-  letter-spacing: -0.02em;
+  display: grid;
+  grid-template-columns: var(--gallery-sidebar-width) 1fr;
+  grid-template-rows: var(--gallery-topnav-height) 1fr;
+  grid-template-areas:
+    "sidebar topnav"
+    "sidebar main";
+  background: var(--gallery-bg);
+  color: var(--gallery-fg);
+  font-family: var(--gallery-font);
+  font-size: var(--gallery-type-size);
+  line-height: var(--gallery-line-height);
+  letter-spacing: var(--gallery-tracking);
+  overflow: hidden;
   animation: galleryFadeIn 350ms ease-out;
 }
 
@@ -36,41 +62,53 @@
   }
 }
 
-/* --- Chrome: title, close, index ------------------------------------- */
+/* --- Top nav --------------------------------------------------------- */
 
-.galleryHeader {
-  position: fixed;
-  top: 30px;
-  left: 120px;
+.galleryTopNav {
+  grid-area: topnav;
   z-index: 20;
-  pointer-events: none;
+  height: var(--gallery-topnav-height);
+  min-height: var(--gallery-topnav-height);
+  max-height: var(--gallery-topnav-height);
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-width: 50vw;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 0 var(--gallery-topnav-padding-x);
+  border-bottom: 1px solid var(--gallery-stroke);
+  box-sizing: border-box;
+}
+
+.galleryProjectInfo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gallery-project-info-gap);
+  min-width: 0;
 }
 
 .galleryTitle {
-  font-size: 32px;
-  line-height: 1;
+  margin: 0;
+  font: inherit;
+  font-weight: 400;
+  color: var(--gallery-fg);
   transition: opacity 250ms ease;
 }
 
 .galleryMeta {
-  font-size: 14px;
-  line-height: 1.2;
-  color: rgba(255, 255, 255, 0.5);
-  letter-spacing: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: 400;
+  color: var(--gallery-fg-meta);
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .galleryClose {
-  position: fixed;
-  top: 30px;
-  right: 40px;
-  z-index: 20;
-  font-size: 32px;
-  line-height: 1;
-  color: #fff;
+  flex-shrink: 0;
+  font: inherit;
+  font-weight: 400;
+  color: var(--gallery-fg);
   text-decoration: none;
   transition: opacity 150ms ease;
 }
@@ -79,88 +117,110 @@
   opacity: 0.7;
 }
 
-.galleryIndex {
-  position: fixed;
-  top: 30px;
-  left: 30px;
+/* --- Sidebar --------------------------------------------------------- */
+
+.gallerySidebar {
+  grid-area: sidebar;
+  grid-row: 1 / -1;
   z-index: 20;
+  width: var(--gallery-sidebar-width);
+  min-width: var(--gallery-sidebar-width);
+  max-width: var(--gallery-sidebar-width);
+  min-height: 0;
+  padding: 0 0 var(--gallery-sidebar-padding-y)
+    var(--gallery-sidebar-padding-left);
+  border-right: 1px solid var(--gallery-stroke);
+  box-sizing: border-box;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
 }
 
-.galleryIndex ol {
+.gallerySidebarNav {
+  flex: 1;
+  min-height: 0;
+  padding-top: calc(
+    (var(--gallery-topnav-height) - var(--gallery-line-height)) / 2
+  );
+  overflow-y: auto;
+  overflow-x: visible;
+  scrollbar-width: none;
+}
+
+.gallerySidebarNav::-webkit-scrollbar {
+  display: none;
+}
+
+.gallerySidebarNav ol {
   list-style: none;
   padding: 0;
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--gallery-sidebar-index-gap);
 }
 
-.galleryIndex button {
+.gallerySidebarNav button {
   background: none;
   border: 0;
-  padding: 2px 0;
+  padding: 0;
   font: inherit;
-  font-size: 32px;
-  line-height: 1;
-  color: rgba(255, 255, 255, 0.4);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--gallery-fg-muted);
   cursor: pointer;
-  transition: color 200ms ease, opacity 200ms ease;
-  letter-spacing: -0.02em;
+  transition: color 200ms ease;
+  text-align: left;
+  white-space: nowrap;
 }
 
-.galleryIndex button:hover {
+.gallerySidebarNav button:hover {
   color: rgba(255, 255, 255, 0.75);
 }
 
-.galleryIndex button.is-active {
-  color: #fff;
+.gallerySidebarNav button.is-active {
+  color: var(--gallery-fg);
 }
 
-/* --- Scroll snap container ------------------------------------------- */
+/* --- Main scroll stage ----------------------------------------------- */
 
 .galleryScroll {
-  position: absolute;
-  inset: 0;
+  grid-area: main;
+  min-height: 0;
   overflow-y: scroll;
   overflow-x: hidden;
   scroll-snap-type: y mandatory;
-  /* Smooth programmatic scrollIntoView for the index click handler.
-   * Native user-driven scrolls still feel snappy because snap handles
-   * the deceleration. */
   scroll-behavior: smooth;
-  /* Hide scrollbar without breaking scroll — visual cleanliness matters
-   * here. */
   scrollbar-width: none;
 }
+
 .galleryScroll::-webkit-scrollbar {
   display: none;
 }
 
 .gallerySection {
   position: relative;
-  height: 100vh;
-  /* Modern viewport unit accounting for dynamic browser UI on mobile. */
-  height: 100dvh;
+  height: 100%;
+  min-height: 100%;
   scroll-snap-align: start;
   scroll-snap-stop: always;
+  container-type: size;
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
-  /* Top padding clears the chrome row (Title at y=40–72) plus an extra
-   * gap below the title before the image starts. Left padding aligns
-   * the media's left edge with the Title column. */
-  padding: 100px 40px 40px 120px;
+  padding: var(--gallery-stage-padding);
   box-sizing: border-box;
 }
 
-/* The media frame — fixed 4:3 aspect ratio, anchored at the section's
- * top-left, scaled to fit the remaining space. */
 .galleryFrame {
   position: relative;
-  width: 100%;
-  max-width: min(80vw, 1100px);
-  max-height: calc(100% - 8px);
-  aspect-ratio: 4 / 3;
+  aspect-ratio: var(--gallery-media-aspect);
+  /* Largest 4:3 box that fits: 20px from top/left chrome and bottom/right viewport */
+  width: min(100cqw, calc(100cqh * 4 / 3));
+  height: min(100cqh, calc(100cqw * 3 / 4));
+  max-width: 100cqw;
+  max-height: 100cqh;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -171,9 +231,8 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  /* GPU-friendly: keep the element on its own layer while scrolling. */
   will-change: transform;
-  background: #d9d9d9;
+  background: var(--gallery-media-bg);
 }
 
 .galleryPlaceholder {
@@ -184,57 +243,48 @@
   align-items: center;
   justify-content: center;
   color: rgba(0, 0, 0, 0.25);
-  font-size: 96px;
-  font-weight: 300;
-  letter-spacing: -0.02em;
+  font: inherit;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
 }
 
-/* --- Responsive breakpoints ----------------------------------------- */
+/* --- Responsive ------------------------------------------------------ */
 
-/* Extra-large desktop — the Figma "XL" variant caps the image at a
- * narrower width so generous right-side whitespace remains. */
-@media (min-width: 1600px) {
-  .galleryFrame {
-    max-width: 60vw;
-  }
-}
-
-/* Tablet — mirror the desktop layout with slightly tighter right padding
- * and the left rail nudged in to match the chrome offsets. Top + left
- * padding still clear the index column (x=40) and the title row (y=40–72)
- * so the media never sits behind them. */
-@media (max-width: 1024px) {
-  .galleryHeader {
-    left: 100px;
-  }
-  .gallerySection {
-    padding: 100px 32px 40px 100px;
-  }
-  .galleryFrame {
-    max-width: min(85vw, 900px);
-  }
-}
-
-/* Mobile — flatten into a clean stacked feed.
- * - No scroll-snap, no horizontal padding: images bleed edge-to-edge.
- * - 24px gap between consecutive images (margin on each section).
- * - Title and number index are hidden; only the Close link remains. */
 @media (max-width: 767px) {
   .galleryRoot {
-    font-size: 20px;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "topnav"
+      "main";
+  }
+
+  .gallerySidebar {
+    display: none;
+  }
+
+  .galleryProjectInfo {
+    display: none;
   }
 
   .galleryScroll {
     scroll-snap-type: none;
-    padding-bottom: 80px;
   }
 
   .gallerySection {
     height: auto;
     min-height: 0;
-    padding: 0 24px;
+    container-type: normal;
+    padding: var(--gallery-stage-padding);
     margin-bottom: 24px;
     scroll-snap-align: none;
+  }
+
+  .galleryFrame {
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    max-height: none;
+    aspect-ratio: var(--gallery-media-aspect);
   }
 
   .gallerySection:last-child {
@@ -242,33 +292,15 @@
   }
 
   .galleryFrame {
-    max-width: 100%;
     max-height: none;
-    aspect-ratio: 4 / 3;
-  }
-
-  /* Title + index are not shown on small screens — Close is the only chrome. */
-  .galleryHeader,
-  .galleryIndex {
-    display: none;
-  }
-
-  .galleryClose {
-    top: 24px;
-    right: 24px;
-    font-size: 20px;
-  }
-
-  .galleryPlaceholder {
-    font-size: 56px;
   }
 }
 
-/* Respect reduced-motion: drop the fade-in and the smooth scroll. */
 @media (prefers-reduced-motion: reduce) {
   .galleryRoot {
     animation: none;
   }
+
   .galleryScroll {
     scroll-behavior: auto;
   }

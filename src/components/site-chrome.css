@@ -1,0 +1,80 @@
+/* Homepage nav — Figma Lukes Brand 3367:1122 (top), 3376:1212 (bottom) */
+
+.siteChrome-bottom {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  pointer-events: none;
+}
+
+.siteChrome-socialGroup {
+  display: flex;
+  gap: 2px;
+  align-items: flex-start;
+}
+
+.siteNavButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 12px;
+  background: #ffffff;
+  color: #000000;
+  font-family: "PP Neue Machina", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.siteNavButton-roll {
+  overflow: hidden;
+  height: 1em;
+  line-height: 100%;
+  display: inline-flex;
+  align-items: flex-start;
+}
+
+.siteNavButton-translate {
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.4s cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+.siteNavButton:hover .siteNavButton-translate {
+  transform: translateY(-50%);
+}
+
+.siteNavButton-line {
+  display: block;
+  height: 1em;
+  line-height: 100%;
+  flex-shrink: 0;
+}
+
+/* margin-top is absorbed by flex `items-center`; translateY gives a visible nudge */
+.siteNavButton-about {
+  transform: translateY(2px);
+}
+
+/* LI / SP — Figma 3376:1217–1220 */
+.siteNavButton-compact {
+  width: 41px;
+  min-width: 41px;
+  padding-inline: 0;
+  text-transform: none;
+}
+
+.siteNavButton:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}

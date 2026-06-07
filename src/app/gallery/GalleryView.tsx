@@ -17,26 +17,15 @@ type Props = {
 };
 
 /**
- * Cinematic, scroll-snap-driven editorial gallery.
- *
- * Desktop / tablet: each artwork pins to a full-viewport section with
- * `scroll-snap-align: start`. A vertical index of 01–0N on the left
- * tracks the active section via IntersectionObserver — clicking a number
- * smoothly scrolls to that section. Videos autoplay while their section
- * is the active one and pause otherwise.
- *
- * Mobile: the same DOM structure ships, but CSS disables scroll-snap and
- * reflows each section to its natural height (see `gallery.css`). It
- * reads as a clean stacked feed without losing the chrome (Title / Close
- * / index nav).
+ * Editorial gallery: left index rail (full height), top nav on the right,
+ * scroll-snap main stage. Videos autoplay for the active slide only.
  */
 export function GalleryView({ items }: Props) {
   const sectionRefs = useRef<Array<HTMLElement | null>>([]);
   const videoRefs = useRef<Array<HTMLVideoElement | null>>([]);
+  const sidebarListRef = useRef<HTMLOListElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
-  // Track the section closest to the viewport center as "active". Used
-  // for the index highlight, the displayed title, and video play/pause.
   useEffect(() => {
     const sections = sectionRefs.current.filter(
       (el): el is HTMLElement => el !== null,
@@ -45,8 +34,6 @@ export function GalleryView({ items }: Props) {
 
     const io = new IntersectionObserver(
       (entries) => {
-        // Pick the entry with the largest intersectionRatio that is
-        // currently above 0.5 — that's the section most "in view".
         let best: { idx: number; ratio: number } | null = null;
         for (const entry of entries) {
           if (entry.intersectionRatio < 0.5) continue;
@@ -65,8 +52,6 @@ export function GalleryView({ items }: Props) {
     return () => io.disconnect();
   }, []);
 
-  // Pause every video except the active one. Muted + playsInline means
-  // mobile browsers honor autoplay.
   useEffect(() => {
     const videos = videoRefs.current;
     for (let i = 0; i < videos.length; i++) {
@@ -74,12 +59,18 @@ export function GalleryView({ items }: Props) {
       if (!v) continue;
       if (i === activeIndex) {
         v.play().catch(() => {
-          /* autoplay blocked — fine, user can tap to play */
+          /* autoplay blocked */
         });
       } else {
         v.pause();
       }
     }
+  }, [activeIndex]);
+
+  useEffect(() => {
+    const item = sidebarListRef.current?.children[activeIndex];
+    const btn = item?.querySelector("button");
+    btn?.scrollIntoView({ block: "nearest" });
   }, [activeIndex]);
 
   function scrollToIndex(idx: number) {
@@ -89,53 +80,45 @@ export function GalleryView({ items }: Props) {
 
   const active = items[activeIndex];
   const padded = (n: number) => String(n).padStart(2, "0");
-  const helvetica =
-    '"Helvetica Neue", Helvetica, Arial, sans-serif';
 
   return (
-    <div
-      className="galleryRoot"
-      style={{ fontFamily: helvetica }}
-      aria-label="Gallery"
-    >
-      {/* Top-left: title of the currently visible artwork. The aria-live
-        * region announces title changes for screen readers as the user
-        * scrolls between pieces. */}
-      <header
-        className="galleryHeader"
-        aria-live="polite"
-        aria-atomic="true"
-      >
-        <div className="galleryTitle">{active?.title ?? ""}</div>
+    <div className="galleryRoot" aria-label="Gallery">
+      <aside className="gallerySidebar">
+        <nav className="gallerySidebarNav" aria-label="Artworks">
+          <ol ref={sidebarListRef}>
+            {items.map((item, idx) => (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  onClick={() => scrollToIndex(idx)}
+                  aria-current={idx === activeIndex ? "true" : undefined}
+                  aria-label={`Go to ${item.title}`}
+                  className={idx === activeIndex ? "is-active" : ""}
+                >
+                  {padded(idx + 1)}
+                </button>
+              </li>
+            ))}
+          </ol>
+        </nav>
+      </aside>
+
+      <header className="galleryTopNav">
+        <div
+          className="galleryProjectInfo"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <h1 className="galleryTitle">{active?.title ?? ""}</h1>
+          {active?.meta ? (
+            <span className="galleryMeta">{active.meta}</span>
+          ) : null}
+        </div>
+        <Link href="/" className="galleryClose" aria-label="Close gallery">
+          Close
+        </Link>
       </header>
 
-      {/* Top-right: Close → home */}
-      <Link href="/" className="galleryClose" aria-label="Close gallery">
-        Close
-      </Link>
-
-      {/* Left edge: number index. Each is a button so it's keyboard- and
-        * screen-reader-friendly. */}
-      <nav className="galleryIndex" aria-label="Artworks">
-        <ol>
-          {items.map((item, idx) => (
-            <li key={item.id}>
-              <button
-                type="button"
-                onClick={() => scrollToIndex(idx)}
-                aria-current={idx === activeIndex ? "true" : undefined}
-                aria-label={`Go to ${item.title}`}
-                className={idx === activeIndex ? "is-active" : ""}
-              >
-                {padded(idx + 1)}
-              </button>
-            </li>
-          ))}
-        </ol>
-      </nav>
-
-      {/* Scroll-snap container. The same DOM also serves as the mobile
-        * stacked feed (CSS disables snapping below the breakpoint). */}
       <main className="galleryScroll">
         {items.map((item, idx) => (
           <section

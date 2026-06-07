@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { SiteChrome } from "@/components/SiteChrome";
+import "@/fonts/pp-neue-machina.css";
+import "@/fonts/ibm-plex-sans-condensed.css";
 import "./globals.css";
 
 export const metadata: Metadata = {

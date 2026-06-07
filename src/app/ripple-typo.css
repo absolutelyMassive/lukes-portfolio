@@ -1,8 +1,8 @@
 /* Wave-driven typographic ASCII — root page styles. */
 
 .rippleTypoRoot {
-  background: #101821;
-  color: #7bb1ed;
+  background: #0054fe;
+  color: #e3e3e4;
 }
 
 .rippleTypoRows {
@@ -40,37 +40,35 @@
   font-style: italic;
 }
 
-/* Strict linear-RGB ramp from the background (#101821) up to peak blue
- * (#7BB1ED). Each tier sits at (n/10) of the way along that line, so the
- * brightness progression is perfectly even. Solid colors (not alpha) so
- * each tier renders at exactly its specified hex. */
+/* Linear RGB ramp: darkest #0054FE (background) → lightest #E3E3E4 (.a10).
+ * Each tier is at n/10 along the line — no easing, no alpha blending. */
 .rippleTypoRoot .a1 {
-  color: #1b2735;
+  color: #1762fb;
 }
 .rippleTypoRoot .a2 {
-  color: #25374a;
+  color: #2d71f9;
 }
 .rippleTypoRoot .a3 {
-  color: #30465e;
+  color: #447ff6;
 }
 .rippleTypoRoot .a4 {
-  color: #3b5573;
+  color: #5b8df4;
 }
 .rippleTypoRoot .a5 {
-  color: #466587;
+  color: #729cf1;
 }
 .rippleTypoRoot .a6 {
-  color: #50749b;
+  color: #88aaee;
 }
 .rippleTypoRoot .a7 {
-  color: #5b83b0;
+  color: #9fb8ec;
 }
 .rippleTypoRoot .a8 {
-  color: #6692c4;
+  color: #b6c6e9;
 }
 .rippleTypoRoot .a9 {
-  color: #70a2d9;
+  color: #ccd5e7;
 }
 .rippleTypoRoot .a10 {
-  color: #7bb1ed;
+  color: #e3e3e4;
 }

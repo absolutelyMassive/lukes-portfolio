@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-label="Gallery placeholder image">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a22"/>
+      <stop offset="50%" stop-color="#2d2d3a"/>
+      <stop offset="100%" stop-color="#121218"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <text x="960" y="520" text-anchor="middle" fill="#8a8a9a" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="42" letter-spacing="0.2em">SAMPLE IMAGE</text>
+  <text x="960" y="580" text-anchor="middle" fill="#5c5c6a" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="22">Replace with your photo in public/gallery/images/</text>
+</svg>

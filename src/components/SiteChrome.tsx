@@ -1,21 +1,14 @@
 "use client";
 
 import { Suspense } from "react";
-import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { RollNavLink } from "./RollNavLink";
+import "./site-chrome.css";
 
 /**
  * Fixed nav overlay rendered on top of every page that wants the default
  * site chrome. Some routes (e.g. /gallery) take over the viewport and
  * provide their own chrome — they're skipped here.
- *
- * The container is `pointer-events: none` so the underlying experience
- * (e.g. the ripple field) still receives pointer events across the full
- * viewport; individual links opt back in to be clickable.
- *
- * `useSearchParams` is wrapped in Suspense per Next.js requirements; the
- * fallback renders nothing so the chrome simply pops in once hydrated
- * (chrome is purely overlay decoration, never the only content).
  */
 export function SiteChrome() {
   return (
@@ -31,44 +24,59 @@ function SiteChromeInner() {
 
   if (pathname?.startsWith("/gallery")) return null;
 
-  // The "about" link toggles the ?about=1 query param on the home route.
-  // Anywhere else, it routes home AND opens about. Either way, clicking
-  // again while it's open returns home with the param cleared.
   const aboutOpen = pathname === "/" && searchParams.get("about") === "1";
   const aboutHref = aboutOpen ? "/" : "/?about=1";
 
-  const linkClass =
-    "pointer-events-auto hover:opacity-70 transition-opacity duration-150";
+  const buttonClass = "siteNavButton pointer-events-auto";
 
   return (
     <nav
       aria-label="Site"
-      className="pointer-events-none fixed inset-0 z-10 text-[24px] leading-none text-white md:text-[32px]"
-      style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
+      className="pointer-events-none fixed inset-0 z-10"
     >
       <div className="absolute inset-x-0 top-0 flex items-center justify-between p-10">
-        <Link href="/" className={linkClass}>
-          Home
-        </Link>
-        <Link href="/gallery" className={linkClass}>
+        <RollNavLink href="/" className={buttonClass}>
+          Luke
+        </RollNavLink>
+        <RollNavLink href="/gallery" className={buttonClass}>
           Open gallery
-        </Link>
-        <Link
+        </RollNavLink>
+        <RollNavLink
           href={aboutHref}
-          className={linkClass}
+          className={`${buttonClass} siteNavButton-about`}
           aria-expanded={aboutOpen}
           aria-controls="about-overlay"
         >
-          about
-        </Link>
+          {aboutOpen ? "Close" : "About"}
+        </RollNavLink>
       </div>
-      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between p-10">
-        <Link href="#" className={linkClass}>
-          Link
-        </Link>
-        <Link href="#" className={linkClass}>
-          Link
-        </Link>
+      <div className="siteChrome-bottom">
+        <RollNavLink
+          href="https://www.youtube.com/watch?v=AFMeq5nsHeg"
+          className={buttonClass}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          General attitude
+        </RollNavLink>
+        <div className="siteChrome-socialGroup">
+          <RollNavLink
+            href="https://www.linkedin.com/in/luke-kavanagh/"
+            className={`${buttonClass} siteNavButton-compact`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            LI
+          </RollNavLink>
+          <RollNavLink
+            href="https://open.spotify.com/track/7MUembV8XyqkWGg5wyjewS?si=b292e8a887fb462c"
+            className={`${buttonClass} siteNavButton-compact`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            SP
+          </RollNavLink>
+        </div>
       </div>
     </nav>
   );
