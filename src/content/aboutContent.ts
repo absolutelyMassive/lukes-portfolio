@@ -5,7 +5,7 @@ export const ABOUT_PARAGRAPHS = [
   "Currently building AI commerce solutions at Squarespace.",
 ] as const;
 
-/** Public path to CV PDF — drop your file at public/downloads/cv.pdf */
-export const ABOUT_CV_PATH = "/downloads/cv.pdf";
+/** Public path to CV PDF — drop your file at public/downloads/luke-kavanaghs-cv.pdf */
+export const ABOUT_CV_PATH = "/downloads/luke-kavanaghs-cv.pdf";
 
-export const ABOUT_CV_DOWNLOAD_NAME = "Luke-Kavanagh-CV.pdf";
+export const ABOUT_CV_DOWNLOAD_NAME = "luke-kavanaghs-cv.pdf";
