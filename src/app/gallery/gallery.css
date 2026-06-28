@@ -19,6 +19,10 @@
   /* Top nav */
   --gallery-topnav-height: 60px;
   --gallery-topnav-padding-x: 20px;
+  --gallery-topnav-padding-top: 20px;
+  --gallery-topnav-padding-bottom: 8px;
+  --gallery-description-padding-right: 80px;
+  --gallery-description-max-width: 1000px;
   --gallery-project-info-gap: 8px;
 
   /* Sidebar — 60px column (Figma); inset keeps 01–16 visible */
@@ -39,7 +43,7 @@
   inset: 0;
   display: grid;
   grid-template-columns: var(--gallery-sidebar-width) 1fr;
-  grid-template-rows: var(--gallery-topnav-height) 1fr;
+  grid-template-rows: auto 1fr;
   grid-template-areas:
     "sidebar topnav"
     "sidebar main";
@@ -67,24 +71,37 @@
 .galleryTopNav {
   grid-area: topnav;
   z-index: 20;
-  height: var(--gallery-topnav-height);
+  position: relative;
   min-height: var(--gallery-topnav-height);
-  max-height: var(--gallery-topnav-height);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 0 var(--gallery-topnav-padding-x);
+  padding: var(--gallery-topnav-padding-top) var(--gallery-topnav-padding-x)
+    var(--gallery-topnav-padding-bottom);
   border-bottom: 1px solid var(--gallery-stroke);
   box-sizing: border-box;
 }
 
 .galleryProjectInfo {
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.galleryProjectInfoRow {
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--gallery-project-info-gap);
   min-width: 0;
+}
+
+.galleryDescription {
+  width: 100%;
+  max-width: var(--gallery-description-max-width);
+  padding-right: var(--gallery-description-padding-right);
+  box-sizing: border-box;
 }
 
 .galleryTitle {
@@ -105,6 +122,10 @@
 }
 
 .galleryClose {
+  position: absolute;
+  top: var(--gallery-topnav-padding-top);
+  right: var(--gallery-topnav-padding-x);
+  z-index: 1;
   flex-shrink: 0;
   font: inherit;
   font-weight: 400;

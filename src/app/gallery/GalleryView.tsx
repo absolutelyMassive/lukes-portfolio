@@ -7,6 +7,8 @@ export type GalleryItem = {
   id: number;
   title: string;
   meta?: string;
+  /** Longer grey line(s) shown below the title and meta in the top nav. */
+  description?: string;
   kind: "image" | "video";
   /** Optional media URL. When null, a neutral placeholder is shown. */
   src: string | null;
@@ -109,9 +111,14 @@ export function GalleryView({ items }: Props) {
           aria-live="polite"
           aria-atomic="true"
         >
-          <h1 className="galleryTitle">{active?.title ?? ""}</h1>
-          {active?.meta ? (
-            <span className="galleryMeta">{active.meta}</span>
+          <div className="galleryProjectInfoRow">
+            <h1 className="galleryTitle">{active?.title ?? ""}</h1>
+            {active?.meta ? (
+              <span className="galleryMeta">{active.meta}</span>
+            ) : null}
+          </div>
+          {active?.description ? (
+            <p className="galleryMeta galleryDescription">{active.description}</p>
           ) : null}
         </div>
         <Link href="/" className="galleryClose" aria-label="Close gallery">
